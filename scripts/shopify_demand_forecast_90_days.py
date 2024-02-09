@@ -850,7 +850,7 @@ s3_client = boto3.client('s3',
                           )
 
 # Set bucket
-BUCKET = os.environ['S3_PRYMAL']
+BUCKET = os.environ['S3_PRYMAL_ANALYTICS']
 
 # WRITE TO S3 =======================================
 
