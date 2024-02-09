@@ -1,0 +1,8 @@
+pandas
+datetime
+pytz
+requests
+loguru
+numpy
+boto3
+botocore
