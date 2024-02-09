@@ -22,6 +22,9 @@ import io
 
 REGION = 'us-east-1'
 
+AWS_ACCESS_KEY_ID=os.environ['AWS_ACCESS_KEY']
+AWS_SECRET_ACCESS_KEY=os.environ['AWS_ACCESS_SECRET']
+
 start_time = datetime.datetime.now()
 logger.info(f'Start time: {start_time}')
 
@@ -835,11 +838,6 @@ inventory_report_df['forecasted_stockout_date'] = inventory_report_df['days_of_s
 logger.info(inventory_report_df.head())
 
 # CONFIGURE BOTO  =======================================
-
-
-
-AWS_ACCESS_KEY_ID=os.environ['AWS_ACCESS_KEY']
-AWS_SECRET_ACCESS_KEY=os.environ['AWS_ACCESS_SECRET']
 
 
 # Create s3 client
