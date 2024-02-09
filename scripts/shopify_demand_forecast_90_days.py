@@ -439,8 +439,6 @@ def generate_daily_run_rate(daily_qty_sold_df: pd.DataFrame, inventory_df: pd.Da
         else:
             inventory_demand_ratio = min(1,days_ordered / days_available)    # for cases where inventory was sold on more days than inventory was available, only allow a max of 1 for this ratio
 
-        logger.info(np.percentile(weekly_df_subset['qty_sold'],75))
-
 
         if len(weekly_df_subset) > 0:
         
