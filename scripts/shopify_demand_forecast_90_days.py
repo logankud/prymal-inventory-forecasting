@@ -872,10 +872,14 @@ logger.info(f'{len(inventory_df)} rows in current_inventory_df')
 
 
 current_date = pd.to_datetime('today') - timedelta(hours=5)     # From UTC to EST
- 
+
+partition_y = pd.to_datetime(current_date).dt.strftime('%Y') 
+partition_m = pd.to_datetime(current_date).dt.strftime('%m') 
+partition_d = pd.to_datetime(current_date).dt.strftime('%d') 
+
 
 # Configure S3 Prefix
-S3_PREFIX_PATH = f"reports/shopify_90_day_demand_forecasting/partition_date={current_date}/shopify_90_day_demand_forecasting_{current_date}.csv"
+S3_PREFIX_PATH = f"reports/shopify_90_day_demand_forecasting/year={partition_y}/month={partition_m}/day={partition_d}/shopify_90_day_demand_forecasting_{partition_y}{partition_m}{partition_d}.csv"
 
 # Check if data already exists for this partition
 data_already_exists = check_path_for_objects(bucket=BUCKET, s3_prefix=S3_PREFIX_PATH)
