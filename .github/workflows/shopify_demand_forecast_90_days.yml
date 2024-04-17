@@ -2,9 +2,9 @@ name: Prymal Shopify 90-day Forecast
 run-name: ${{ github.actor }} - Shopify 90-day Forecast
 on: 
   workflow_dispatch:
-  push:
-    paths:
-      - '**/scripts/shopify_demand_forecast_90_days.py'
+  # push:
+  #   paths:
+  #     - '**/scripts/shopify_demand_forecast_90_days.py'
       -  '**/workflows/shopify_demand_forecast_90_days.yml'
   schedule:
     - cron: '0 10 * * *'  # Runs at 10 AM every day 
