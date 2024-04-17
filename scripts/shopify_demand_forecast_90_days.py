@@ -1,7 +1,7 @@
 
 import boto3
 import base64
-from botocore.exceptions import ClientError
+from botocore.exceptions import ClientError, ParamValidationError, WaiterError
 import json
 import requests
 import pandas as pd
@@ -21,6 +21,8 @@ import io
 # -------------------------------------
 
 REGION = 'us-east-1'
+
+
 
 AWS_ACCESS_KEY_ID=os.environ['AWS_ACCESS_KEY']
 AWS_SECRET_ACCESS_KEY=os.environ['AWS_ACCESS_SECRET']
@@ -62,9 +64,11 @@ def run_athena_query(query:str, database: str, region:str):
         # Wait for the query to complete
         state = 'RUNNING'
 
+        logger.info("Running query...")
+
+
         while (state in ['RUNNING', 'QUEUED']):
             response = athena_client.get_query_execution(QueryExecutionId = query_execution_id)
-            logger.info(f'Query is in {state} state..')
             if 'QueryExecution' in response and 'Status' in response['QueryExecution'] and 'State' in response['QueryExecution']['Status']:
                 # Get currentstate
                 state = response['QueryExecution']['Status']['State']
@@ -216,7 +220,6 @@ def delete_s3_prefix_data(bucket:str, s3_prefix:str):
       logger.info(f"Deleted {len(keys_to_delete)} objects")
   else:
       logger.info("No objects to delete")
-
 
 
 
@@ -440,6 +443,7 @@ def generate_daily_run_rate(daily_qty_sold_df: pd.DataFrame, inventory_df: pd.Da
             inventory_demand_ratio = min(1,days_ordered / days_available)    # for cases where inventory was sold on more days than inventory was available, only allow a max of 1 for this ratio
 
 
+
         if len(weekly_df_subset) > 0:
         
             last_2_weekly_median = weekly_df_subset['qty_sold'].median() * inventory_demand_ratio
@@ -589,16 +593,24 @@ def generate_daily_run_rate(daily_qty_sold_df: pd.DataFrame, inventory_df: pd.Da
     # Fill na with 0 (if no units were sold in last 7 days)
     last_7_actual['last_7_actual'] =  last_7_actual['last_7_actual'].fillna(0)
 
+    # Last 90 days actual 
+    last_90_actual = daily_df.loc[pd.to_datetime(daily_df['order_date']) >= (pd.to_datetime('today') - timedelta(90))].groupby('sku',as_index=False)['qty_sold'].sum()
+    last_90_actual.columns = ['sku','last_90_actual']
+    # Fill na with 0 (if no units were sold in last 7 days)
+    last_90_actual['last_90_actual'] =  last_90_actual['last_90_actual'].fillna(0)
+
+
+
 
     # Merge
-    df = df.merge(last_7_actual, on='sku',how='left').copy()
+    df = df.merge(last_7_actual, on='sku',how='left').merge(last_90_actual, on='sku',how='left').copy()
 
 
     # Set partition date to yesterday (data as of yesterday)
     df['partition_date'] = pd.to_datetime(pd.to_datetime('today') - timedelta(1)).strftime('%Y-%m-%d')
 
 
-    return df[['sku','sku_name','forecast','lower_bound','upper_bound','last_7_actual','partition_date']]
+    return df[['sku','sku_name','forecast','lower_bound','upper_bound','last_7_actual','last_90_actual','partition_date']]
 
 
 
@@ -614,7 +626,7 @@ REGION = 'us-east-1'
 #  ---------------------------------
 
 
-lookback_cutoff_date = pd.to_datetime(pd.to_datetime('today') - timedelta(days=60)).strftime('%Y-%m-%d')    # Back to 6 weeks ago
+lookback_cutoff_date = pd.to_datetime(pd.to_datetime('today') - timedelta(days=100)).strftime('%Y-%m-%d')    # Back to 6 weeks ago
 
 #  ---------------------------------
 #  QUERY ORDER DATA (JOINED WITH NORMALIZED SKU DATA)
@@ -744,7 +756,7 @@ inventory_details_df = product_run_rate_df.merge(inventory_df,
 # inventory_details_df['days_of_stock_onhand'] = round(inventory_details_df['inventory_on_hand'] / inventory_details_df['upper_bound'],0).astype(int)
 
 
-inventory_details_df.head()
+logger.info(inventory_details_df['inventory_on_hand'].head())
 
 
 # ------------------
@@ -834,6 +846,8 @@ for r in range(len(inventory_report_df)):
 inventory_report_df['forecasted_stockout_date'] = inventory_report_df['days_of_stock_on_hand'].apply(lambda x: pd.to_datetime(pd.to_datetime('today') + timedelta(max(x,0))).strftime('%Y-%m-%d'))
 
 logger.info(inventory_report_df.head())
+
+inventory_report_df.to_csv(f'inventory_report_{pd.to_datetime("today").strftime("%Y%m%d")}.csv')
 
 # CONFIGURE BOTO  =======================================
 
