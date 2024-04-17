@@ -873,9 +873,9 @@ logger.info(f'{len(inventory_df)} rows in current_inventory_df')
 
 current_date = pd.to_datetime('today') - timedelta(hours=5)     # From UTC to EST
 
-partition_y = pd.to_datetime(current_date).dt.strftime('%Y') 
-partition_m = pd.to_datetime(current_date).dt.strftime('%m') 
-partition_d = pd.to_datetime(current_date).dt.strftime('%d') 
+partition_y = pd.to_datetime(current_date).strftime('%Y') 
+partition_m = pd.to_datetime(current_date).strftime('%m') 
+partition_d = pd.to_datetime(current_date).strftime('%d') 
 
 
 # Configure S3 Prefix
