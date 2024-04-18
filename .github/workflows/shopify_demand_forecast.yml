@@ -32,6 +32,6 @@ jobs:
           AWS_ACCESS_KEY:  ${{ secrets.AWS_ACCESS_KEY }}
           AWS_ACCESS_SECRET: ${{ secrets.AWS_ACCESS_SECRET }}
           S3_PRYMAL_ANALYTICS: ${{ secrets.S3_PRYMAL_ANALYTICS }}
-        run: python scripts/shopify_demand_forecast_90_days.py 
+        run: python scripts/shopify_demand_forecast.py 
 
       - run: echo "Job status - ${{ job.status }}."
