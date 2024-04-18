@@ -808,14 +808,20 @@ inventory_report_df = pd.concat([classic_320g_df,bulk_bag_df, sachet_df,coffee_d
 # reset index
 inventory_report_df.reset_index(inplace=True,drop=True)
 
-# Extend upper bound of forecast for 90 days to determine upcoming quarter inventory needs
+# Extend upper bound of forecast for 90, 120, 150 days to determine upcoming quarter inventory needs
 inventory_report_df['forecast_90_days'] = round(inventory_report_df['upper_bound'] * 90,0)
+inventory_report_df['forecast_120_days'] = round(inventory_report_df['upper_bound'] * 120,0)
+inventory_report_df['forecast_150_days'] = round(inventory_report_df['upper_bound'] * 150,0)
 
 # Subtract inventory on hand from forecasted qty to determine production needs
 inventory_report_df['production_next_90_days'] = inventory_report_df['forecast_90_days'] - inventory_report_df['inventory_on_hand']
+inventory_report_df['production_next_120_days'] = inventory_report_df['forecast_120_days'] - inventory_report_df['inventory_on_hand']
+inventory_report_df['production_next_150_days'] = inventory_report_df['forecast_150_days'] - inventory_report_df['inventory_on_hand']
 
 # Replace negative with 0 for any instances where there is sufficient inventory for the quarter
 inventory_report_df.loc[inventory_report_df['production_next_90_days']<0,'production_next_90_days'] = 0
+inventory_report_df.loc[inventory_report_df['production_next_120_days']<0,'production_next_120_days'] = 0
+inventory_report_df.loc[inventory_report_df['production_next_150_days']<0,'production_next_150_days'] = 0
 
 # Calculate forecasted stockout date
 for r in range(len(inventory_report_df)):
@@ -879,7 +885,7 @@ partition_d = pd.to_datetime(current_date).strftime('%d')
 
 
 # Configure S3 Prefix
-S3_PREFIX_PATH = f"reports/shopify_90_day_demand_forecasting/year={partition_y}/month={partition_m}/day={partition_d}/shopify_90_day_demand_forecasting_{partition_y}{partition_m}{partition_d}.csv"
+S3_PREFIX_PATH = f"reports/shopify_demand_forecasting/year={partition_y}/month={partition_m}/day={partition_d}/shopify_demand_forecasting_{partition_y}{partition_m}{partition_d}.csv"
 
 # Check if data already exists for this partition
 data_already_exists = check_path_for_objects(bucket=BUCKET, s3_prefix=S3_PREFIX_PATH)

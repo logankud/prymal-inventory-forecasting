@@ -1,5 +1,5 @@
-name: Prymal Shopify 90-day Forecast
-run-name: ${{ github.actor }} - Shopify 90-day Forecast
+name: Prymal Shopify Demand Forecast (90,120,150 days)
+run-name: ${{ github.actor }} - Shopify Demand Forecast (90,120,150 days)
 on: 
   workflow_dispatch:
   # push:
@@ -9,7 +9,7 @@ on:
   schedule:
     - cron: '0 10 * * *'  # Runs at 10 AM every day 
 jobs:
-  shopify_90_day_forecast:
+  shopify_demand_forecast:
     runs-on: ubuntu-latest
     steps:
       - name: Check out repo code
