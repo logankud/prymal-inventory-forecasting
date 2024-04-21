@@ -848,7 +848,7 @@ inventory_report_df.reset_index(inplace=True,drop=True)
 
 # Fill NA with 0
 logger.info(f'NAN count: {inventory_report_df.isna().sum()}')
-inventory_report_df[['lower_bound','upper_bound','last_7_actual','last_90_actual']].fillna(0,inplace=True)
+inventory_report_df[['lower_bound','upper_bound','last_7_actual','last_90_actual']] = inventory_report_df[['lower_bound','upper_bound','last_7_actual','last_90_actual']].fillna(0).copy()
 logger.info(f'NAN count: {inventory_report_df.isna().sum()}')
 
 # Extend upper bound of forecast for 90, 120, 150 days to determine upcoming quarter inventory needs
