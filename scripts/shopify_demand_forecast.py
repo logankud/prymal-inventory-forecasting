@@ -907,7 +907,7 @@ for idx, row in inventory_report_df.iterrows():
         validated_data = ShopifyDemandForecast(**row.to_dict())
         valid_data.append(validated_data.__dict__)
     except Exception as e:  
-        print(f"Data validation failed: {e}")
+        logger.error(f"Data validation failed: {e}")
         invalid_data.append(row.to_dict())
 
     # Convert back to df
