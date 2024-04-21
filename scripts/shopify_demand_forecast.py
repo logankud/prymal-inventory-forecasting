@@ -16,13 +16,14 @@ from loguru import logger
 import re
 import io
 
+# Import pydantic models for data validation 
+from models.pydantic_models import ShopifyDemandForecast
+
 # -------------------------------------
 # Variables
 # -------------------------------------
 
 REGION = 'us-east-1'
-
-
 
 AWS_ACCESS_KEY_ID=os.environ['AWS_ACCESS_KEY']
 AWS_SECRET_ACCESS_KEY=os.environ['AWS_ACCESS_SECRET']
@@ -614,6 +615,42 @@ def generate_daily_run_rate(daily_qty_sold_df: pd.DataFrame, inventory_df: pd.Da
 
 
 
+def send_sns_alert_email(topic_arn: str, email_subject:str, email_body: str):
+    """
+    Function to invoke an SNS topic to send an email alert
+
+    Params:
+        topic_arn: ARN of the SNS topic to invoke
+        email_subject: subject of the email to send
+        email_body: body of the email to send 
+
+
+    """
+
+    try:
+
+        # Initialize a boto3 client for SNS
+        sns_client = boto3.client('sns', 
+                                        region_name='us-east-1',
+                                        aws_access_key_id=AWS_ACCESS_KEY_ID,
+                                        aws_secret_access_key=AWS_SECRET_ACCESS_KEY)  
+
+        
+
+        logger.info(f'Sending SNS alert to {topic_arn}')
+
+        # Publish a message to the SNS topic
+        response = sns_client.publish(
+            TopicArn=topic_arn,
+            Message=email_body,
+            Subject=email_subject
+        )
+
+        logger.info(f'SNS Response: {response}')
+
+    except ClientError as e:
+        logger.error(f'Error publishing to SNS topic ({topic_arn}): {e}')
+
 # ========================================================================
 # Execute Code
 # ========================================================================
@@ -855,6 +892,27 @@ logger.info(inventory_report_df.head())
 
 inventory_report_df.to_csv(f'inventory_report_{pd.to_datetime("today").strftime("%Y%m%d")}.csv')
 
+
+# VALIDATE DATA 
+# ------------------
+
+valid_data = []
+invalid_data = []
+
+# Iterate through each row, convert to dict, validate against Pydantic model
+for idx, row in inventory_report_df.iterrows():
+    try:
+        # Validate row with Pydantic Model
+        validated_data = ShopifyDemandForecast(**row.to_dict())
+        valid_data.append(validated_data.__dict__)
+    except Exception as e:  
+        print(f"Data validation failed: {e}")
+        invalid_data.append(row.to_dict())
+
+    # Convert back to df
+    valid_df = pd.DataFrame(valid_data)
+    invalid_df = pd.DataFrame(invalid_data)
+
 # CONFIGURE BOTO  =======================================
 
 
@@ -874,45 +932,56 @@ current_time = datetime.datetime.now()
 logger.info(f'Current time: {current_time}')
 
 # Log number of rows
-logger.info(f'{len(inventory_df)} rows in current_inventory_df')
+logger.info(f'{len(valid_df)} rows in valid_df')
+logger.info(f'{len(invalid_df)} rows in invalid_df')
+
+# If there are valid records, write to s3
+if len(valid_df) > 0 and len(invalid_df) == 0:
+
+    current_date = pd.to_datetime('today') - timedelta(hours=5)     # From UTC to EST
+
+    partition_y = pd.to_datetime(current_date).strftime('%Y') 
+    partition_m = pd.to_datetime(current_date).strftime('%m') 
+    partition_d = pd.to_datetime(current_date).strftime('%d') 
 
 
-current_date = pd.to_datetime('today') - timedelta(hours=5)     # From UTC to EST
+    # Configure S3 Prefix
+    S3_PREFIX_PATH = f"reports/shopify_demand_forecasting/year={partition_y}/month={partition_m}/day={partition_d}/shopify_demand_forecasting_{partition_y}{partition_m}{partition_d}.csv"
 
-partition_y = pd.to_datetime(current_date).strftime('%Y') 
-partition_m = pd.to_datetime(current_date).strftime('%m') 
-partition_d = pd.to_datetime(current_date).strftime('%d') 
+    # Check if data already exists for this partition
+    data_already_exists = check_path_for_objects(bucket=BUCKET, s3_prefix=S3_PREFIX_PATH)
 
-
-# Configure S3 Prefix
-S3_PREFIX_PATH = f"reports/shopify_demand_forecasting/year={partition_y}/month={partition_m}/day={partition_d}/shopify_demand_forecasting_{partition_y}{partition_m}{partition_d}.csv"
-
-# Check if data already exists for this partition
-data_already_exists = check_path_for_objects(bucket=BUCKET, s3_prefix=S3_PREFIX_PATH)
-
-# If data already exists, delete it .. 
-if data_already_exists == True:
-   
-   # Delete data 
-   delete_s3_prefix_data(bucket=BUCKET, s3_prefix=S3_PREFIX_PATH)
+    # If data already exists, delete it .. (idempotent check)
+    if data_already_exists == True:
+        # Delete data 
+        delete_s3_prefix_data(bucket=BUCKET, s3_prefix=S3_PREFIX_PATH)
 
 
-logger.info(f'Writing to {S3_PREFIX_PATH}')
+    logger.info(f'Writing to {S3_PREFIX_PATH}')
 
 
-with io.StringIO() as csv_buffer:
-    inventory_report_df.to_csv(csv_buffer, index=False)
+    with io.StringIO() as csv_buffer:
+        inventory_report_df.to_csv(csv_buffer, index=False)
 
-    response = s3_client.put_object(
-        Bucket=BUCKET, 
-        Key=S3_PREFIX_PATH, 
-        Body=csv_buffer.getvalue()
-    )
+        response = s3_client.put_object(
+            Bucket=BUCKET, 
+            Key=S3_PREFIX_PATH, 
+            Body=csv_buffer.getvalue()
+        )
 
-    status = response['ResponseMetadata']['HTTPStatusCode']
+        status = response['ResponseMetadata']['HTTPStatusCode']
 
-    if status == 200:
-        logger.info(f"Successful S3 put_object response for PUT ({S3_PREFIX_PATH}). Status - {status}")
-    else:
-        logger.error(f"Unsuccessful S3 put_object response for PUT ({S3_PREFIX_PATH}. Status - {status}")
+        if status == 200:
+            logger.info(f"Successful S3 put_object response for PUT ({S3_PREFIX_PATH}). Status - {status}")
+        else:
+            logger.error(f"Unsuccessful S3 put_object response for PUT ({S3_PREFIX_PATH}. Status - {status}")
 
+# Else, if there are invalid records, send an alert
+else:
+
+    # Configure SNS email alert
+    topic_arn = 'arn:aws:sns:us-east-1:925570149811:prymal_alerts'  
+    email_subject = 'INVALID DATA - prymal_shopify_demand_forecast'
+    email_body = """Invalid data was generated by this pipeline.  No data will be written to S3 for this pipeline run.  Please check logs for details"""
+
+    send_sns_alert_email(topic_arn, email_subject, email_body)
