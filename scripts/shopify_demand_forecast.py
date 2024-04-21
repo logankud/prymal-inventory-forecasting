@@ -897,8 +897,7 @@ logger.info(inventory_report_df.head())
 # inventory_report_df.to_csv(f'inventory_report_{pd.to_datetime("today").strftime("%Y%m%d")}.csv')
 
 
-# VALIDATE DATA 
-# ------------------
+# VALIDATE DATA =======================================
 
 valid_data = []
 invalid_data = []
@@ -911,6 +910,7 @@ for idx, row in inventory_report_df.iterrows():
         valid_data.append(validated_data.__dict__)
     except Exception as e:  
         logger.error(f"Data validation failed: {e}")
+        logger.error(row.to_dict())
         invalid_data.append(row.to_dict())
 
     # Convert back to df
@@ -983,7 +983,7 @@ if len(valid_df) > 0 and len(invalid_df) == 0:
 # Else, if there are invalid records, send an alert
 else:
 
-    logger.error(f'Invalid records: {invalid_data['sku_name'].unique()}')
+    logger.error(f"Invalid records: {invalid_data['sku_name'].unique()}")
 
     # Configure SNS email alert
     topic_arn = 'arn:aws:sns:us-east-1:925570149811:prymal_alerts'  
