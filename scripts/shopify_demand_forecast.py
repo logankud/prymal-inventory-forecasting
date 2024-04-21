@@ -847,7 +847,9 @@ inventory_report_df = pd.concat([classic_320g_df,bulk_bag_df, sachet_df,coffee_d
 inventory_report_df.reset_index(inplace=True,drop=True)
 
 # Fill NA with 0
+logger.info(f'NAN count: {inventory_report_df.isna().sum()}')
 inventory_report_df[['lower_bound','upper_bound','last_7_actual','last_90_actual']].fillna(0,inplace=True)
+logger.info(f'NAN count: {inventory_report_df.isna().sum()}')
 
 # Extend upper bound of forecast for 90, 120, 150 days to determine upcoming quarter inventory needs
 inventory_report_df['forecast_90_days'] = round(inventory_report_df['upper_bound'] * 90,0)
