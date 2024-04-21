@@ -891,7 +891,7 @@ inventory_report_df['forecasted_stockout_date'] = inventory_report_df['days_of_s
 
 logger.info(inventory_report_df.head())
 
-inventory_report_df.to_csv(f'inventory_report_{pd.to_datetime("today").strftime("%Y%m%d")}.csv')
+# inventory_report_df.to_csv(f'inventory_report_{pd.to_datetime("today").strftime("%Y%m%d")}.csv')
 
 
 # VALIDATE DATA 
