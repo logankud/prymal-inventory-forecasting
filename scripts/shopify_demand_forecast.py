@@ -792,7 +792,7 @@ inventory_details_df = product_run_rate_df.merge(inventory_df,
 
 
 # Fill NaN inventory_on_hand records with 0
-inventory_details_df['inventory_on_hand'].fillna(0,inpplace=True)
+inventory_details_df['inventory_on_hand'].fillna(0,inplace=True)
 
 # # Calculate days of stock on hand given the inventory on hand and daily run rate
 # inventory_details_df['days_of_stock_onhand'] = round(inventory_details_df['inventory_on_hand'] / inventory_details_df['upper_bound'],0).astype(int)
