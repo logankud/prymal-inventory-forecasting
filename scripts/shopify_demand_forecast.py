@@ -790,6 +790,10 @@ inventory_details_df = product_run_rate_df.merge(inventory_df,
                 how='left',
                 on=['partition_date', 'sku'])
 
+
+# Fill NaN inventory_on_hand records with 0
+inventory_details_df['inventory_on_hand'].fillna(0,inpplace=True)
+
 # # Calculate days of stock on hand given the inventory on hand and daily run rate
 # inventory_details_df['days_of_stock_onhand'] = round(inventory_details_df['inventory_on_hand'] / inventory_details_df['upper_bound'],0).astype(int)
 
@@ -856,10 +860,13 @@ inventory_report_df['forecast_90_days'] = round(inventory_report_df['upper_bound
 inventory_report_df['forecast_120_days'] = round(inventory_report_df['upper_bound'] * 120,0)
 inventory_report_df['forecast_150_days'] = round(inventory_report_df['upper_bound'] * 150,0)
 
+
+
 # Subtract inventory on hand from forecasted qty to determine production needs
 inventory_report_df['production_next_90_days'] = inventory_report_df['forecast_90_days'] - inventory_report_df['inventory_on_hand']
 inventory_report_df['production_next_120_days'] = inventory_report_df['forecast_120_days'] - inventory_report_df['inventory_on_hand']
 inventory_report_df['production_next_150_days'] = inventory_report_df['forecast_150_days'] - inventory_report_df['inventory_on_hand']
+
 
 # Replace negative with 0 for any instances where there is sufficient inventory for the quarter
 inventory_report_df.loc[inventory_report_df['production_next_90_days']<0,'production_next_90_days'] = 0
@@ -918,6 +925,25 @@ for idx, row in inventory_report_df.iterrows():
     # Convert back to df
     valid_df = pd.DataFrame(valid_data)
     invalid_df = pd.DataFrame(invalid_data)
+
+
+# #=======  LOCAL MODE: write to csv locally 
+
+# current_date = pd.to_datetime('today') - timedelta(hours=5)     # From UTC to EST
+
+# partition_y = pd.to_datetime(current_date).strftime('%Y') 
+# partition_m = pd.to_datetime(current_date).strftime('%m') 
+# partition_d = pd.to_datetime(current_date).strftime('%d') 
+
+
+# if len(valid_df) > 0:
+#     valid_df.to_csv(f'inventory_forecasts/shopify_demand_forecast_{partition_y}{partition_m}{partition_d}_validated.csv',index=False)
+
+# if len(invalid_df) > 0:
+#     invalid_df.to_csv(f'inventory_forecasts/shopify_demand_forecast_{partition_y}{partition_m}{partition_d}_invalid.csv',index=False)
+
+# # =======================================================
+
 
 # CONFIGURE BOTO  =======================================
 
